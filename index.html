@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Stroop Treadmill Test (10 trials)</title>
+  <meta name="description" content="Mobile-friendly 10-trial Stroop test for treadmill dual-task research and teaching." />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app" id="app" aria-live="polite">
+    <header class="topbar">
+      <div class="brand">
+        <div class="dot"></div>
+        <div>
+          <div class="title">Stroop Treadmill Test</div>
+          <div class="subtitle">10 trials • tap the ink colour</div>
+        </div>
+      </div>
+      <button id="btnFullscreen" class="ghost" type="button" title="Fullscreen (recommended on iPad)">Fullscreen</button>
+    </header>
+
+    <!-- Setup / Start screen -->
+    <section id="screenSetup" class="screen">
+      <h1>Ready?</h1>
+      <p class="lead">
+        Stand or walk/run safely on the treadmill. Keep your eyes on the screen.
+        For each stimulus, <strong>tap the ink colour</strong> as fast and accurately as you can.
+      </p>
+
+      <div class="card">
+        <h2>Participant details (optional)</h2>
+        <div class="grid">
+          <label class="field">
+            <span>Participant ID</span>
+            <input id="pid" inputmode="text" autocomplete="off" placeholder="e.g., P01" />
+          </label>
+          <label class="field">
+            <span>Condition</span>
+            <select id="condition">
+              <option value="walk">Walk</option>
+              <option value="run">Run</option>
+              <option value="stand">Stand</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Treadmill speed (optional)</span>
+            <input id="speed" inputmode="decimal" autocomplete="off" placeholder="e.g., 6.0 km/h" />
+          </label>
+          <label class="field">
+            <span>Notes (optional)</span>
+            <input id="notes" inputmode="text" autocomplete="off" placeholder="e.g., incline 2%" />
+          </label>
+        </div>
+
+        <div class="row">
+          <label class="switch">
+            <input id="audioToggle" type="checkbox" checked />
+            <span>Beep on stimulus</span>
+          </label>
+
+          <label class="switch">
+            <input id="practiceToggle" type="checkbox" />
+            <span>Include 2 practice trials (not saved)</span>
+          </label>
+        </div>
+
+        <div class="row">
+          <label class="field">
+            <span>Trials</span>
+            <select id="nTrials">
+              <option value="10" selected>10 (default)</option>
+              <option value="15">15</option>
+              <option value="20">20</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Incongruent rate</span>
+            <select id="inconRate">
+              <option value="0.7" selected>70%</option>
+              <option value="0.5">50%</option>
+              <option value="0.9">90%</option>
+            </select>
+          </label>
+        </div>
+
+        <button id="btnStart" class="primary" type="button">Start test</button>
+        <p class="hint">Tip: Use Fullscreen for best visibility.</p>
+      </div>
+
+      <details class="details">
+        <summary>What gets recorded?</summary>
+        <ul>
+          <li>Reaction time (ms) from stimulus onset to tap</li>
+          <li>Accuracy (correct ink-colour choice)</li>
+          <li>Stimulus word, ink colour, congruency, and the choices shown</li>
+          <li>Timestamp and optional participant/condition fields</li>
+        </ul>
+      </details>
+    </section>
+
+    <!-- Test screen -->
+    <section id="screenTest" class="screen hidden">
+      <div class="progress">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+
+      <div class="stimulus-wrap">
+        <div id="stimulusBlock" class="stimulus" role="img" aria-label="Stroop stimulus">
+          <span id="stimulusWord">BLUE</span>
+        </div>
+      </div>
+
+      <div class="choices" role="group" aria-label="Answer choices">
+        <button id="choiceA" class="choice" type="button"></button>
+        <button id="choiceB" class="choice" type="button"></button>
+      </div>
+
+      <div class="foot">
+        <div id="trialLabel" class="trial-label">Trial 1 / 10</div>
+        <button id="btnAbort" class="ghost" type="button">Abort</button>
+      </div>
+    </section>
+
+    <!-- Results screen -->
+    <section id="screenDone" class="screen hidden">
+      <h1>Done</h1>
+      <div class="card">
+        <div class="summary-grid">
+          <div class="metric">
+            <div class="k">Trials</div>
+            <div class="v" id="mTrials">10</div>
+          </div>
+          <div class="metric">
+            <div class="k">Accuracy</div>
+            <div class="v" id="mAcc">—</div>
+          </div>
+          <div class="metric">
+            <div class="k">Mean RT</div>
+            <div class="v" id="mMean">—</div>
+          </div>
+          <div class="metric">
+            <div class="k">Median RT</div>
+            <div class="v" id="mMedian">—</div>
+          </div>
+        </div>
+
+        <div class="row">
+          <button id="btnDownload" class="primary" type="button">Download CSV</button>
+          <button id="btnRestart" class="ghost" type="button">Restart</button>
+        </div>
+
+        <div class="small">
+          <p><strong>Safety note:</strong> Use a stable phone/iPad mount. Do not hold the device while running.</p>
+        </div>
+      </div>
+
+      <details class="details">
+        <summary>Preview (first few rows)</summary>
+        <div class="table-wrap">
+          <table id="previewTable" class="table"></table>
+        </div>
+      </details>
+    </section>
+
+    <footer class="footer">
+      <span>Built for teaching & data collection • Works offline when hosted locally</span>
+    </footer>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
