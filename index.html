@@ -14,7 +14,7 @@
         <div class="dot"></div>
         <div>
           <div class="title">Stroop Treadmill Test</div>
-          <div class="subtitle">10 trials • tap the ink colour</div>
+          <div class="subtitle">10 trials • tap or say the ink colour</div>
         </div>
       </div>
       <button id="btnFullscreen" class="ghost" type="button" title="Fullscreen (recommended on iPad)">Fullscreen</button>
@@ -38,10 +38,11 @@
           <label class="field">
             <span>Condition</span>
             <select id="condition">
-              <option value="walk">Walk</option>
-              <option value="run">Run</option>
-              <option value="stand">Stand</option>
-              <option value="other">Other</option>
+              <option value="preferred_walk" selected>Preferred walk</option>
+              <option value="nonpreferred_walk">Non-preferred walk</option>
+              <option value="preferred_run">Preferred run</option>
+              <option value="nonpreferred_run">Non-preferred run</option>
+              <option value="control">Control</option>
             </select>
           </label>
           <label class="field">
@@ -58,6 +59,11 @@
           <label class="switch">
             <input id="audioToggle" type="checkbox" checked />
             <span>Beep on stimulus</span>
+          </label>
+
+          <label class="switch">
+            <input id="voiceToggle" type="checkbox" />
+            <span>Enable voice answers (mic)</span>
           </label>
 
           <label class="switch">
