@@ -77,6 +77,50 @@
 
   // Simple beep (optional). Works on most mobile browsers after user interaction.
   function makeBeep() {
+
+  // Speech recognition (optional; tap remains available as fallback).
+  function getSpeechRecognition() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return null;
+    const rec = new SR();
+    rec.lang = 'en-US';
+    rec.continuous = false;
+    rec.interimResults = false;
+    rec.maxAlternatives = 3;
+    return rec;
+  }
+
+  function normalizeSpeech(s) {
+    return (s || '')
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/\s+/g, ' ');
+  }
+
+  function mapSpeechToColor(transcript) {
+    const t = normalizeSpeech(transcript);
+    // Allow common variants / mis-hearings
+    const map = [
+      ['red', 'RED'],
+      ['read', 'RED'],
+      ['blue', 'BLUE'],
+      ['blew', 'BLUE'],
+      ['green', 'GREEN'],
+      ['grain', 'GREEN'],
+      ['yellow', 'YELLOW'],
+      ['yello', 'YELLOW']
+    ];
+    for (const [k, v] of map) {
+      if (t === k) return v;
+    }
+    // Also handle phrases like "the answer is blue"
+    for (const [k, v] of map) {
+      if (t.includes(' ' + k) || t.startsWith(k + ' ') || t.endsWith(' ' + k)) return v;
+    }
+    return null;
+  }
+
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     return () => {
       const o = ctx.createOscillator();
@@ -101,13 +145,16 @@
 
   const state = {
     participant: { id: '', condition: 'walk', speed: '', notes: '' },
-    settings: { nTrials: 10, inconRate: 0.7, beep: true, practice: false },
+    settings: { nTrials: 10, inconRate: 0.7, beep: true, practice: false, voice: false },
     phase: 'setup', // setup | practice | test | done
     trials: [],
     results: [],
     idx: 0,
     t0: 0,
-    beepFn: null
+    beepFn: null,
+    rec: null,
+    recActive: false,
+    answered: false
   };
 
   // ---------- UI refs ----------
@@ -141,6 +188,7 @@
   const notes = $('notes');
   const audioToggle = $('audioToggle');
   const practiceToggle = $('practiceToggle');
+  const voiceToggle = $('voiceToggle');
   const nTrials = $('nTrials');
   const inconRate = $('inconRate');
 
@@ -193,6 +241,56 @@
     screen.classList.remove('hidden');
   }
 
+  function stopRecognition() {
+    if (state.rec && state.recActive) {
+      try { state.rec.stop(); } catch (e) {}
+    }
+    state.recActive = false;
+  }
+
+  function startRecognitionForTrial() {
+    if (!state.settings.voice || !state.rec) return;
+
+    // Stop any prior session
+    stopRecognition();
+
+    const rec = state.rec;
+    state.recActive = true;
+
+    // Handlers are assigned each time to capture current trial context.
+    rec.onresult = (event) => {
+      if (state.answered) return;
+      const res = event.results && event.results[0] && event.results[0][0];
+      const transcript = res ? res.transcript : '';
+      const mapped = mapSpeechToColor(transcript);
+      if (mapped) {
+        // Prevent double-answer; lock immediately
+        lockChoices(true);
+        state.answered = true;
+        stopRecognition();
+        recordAnswer(mapped);
+      }
+      // If not mapped, we do nothing; tap remains available.
+    };
+
+    rec.onerror = () => {
+      // On error, just stop and continue with taps.
+      stopRecognition();
+    };
+
+    rec.onend = () => {
+      state.recActive = false;
+      // If user hasn't answered yet, taps remain; no auto-restart to avoid loops on iOS.
+    };
+
+    try {
+      rec.start();
+    } catch (e) {
+      // Some browsers throw if start called too quickly; ignore
+      stopRecognition();
+    }
+  }
+
   function lockChoices(lock) {
     choiceA.disabled = lock;
     choiceB.disabled = lock;
@@ -232,6 +330,7 @@
     state.participant.speed = speed.value.trim();
     state.participant.notes = notes.value.trim();
     state.settings.beep = !!audioToggle.checked;
+    state.settings.voice = voiceToggle ? !!voiceToggle.checked : false;
     state.settings.practice = !!practiceToggle.checked;
     state.settings.nTrials = parseInt(nTrials.value, 10);
     state.settings.inconRate = parseFloat(inconRate.value);
@@ -270,6 +369,7 @@
       return;
     }
 
+    state.answered = false;
     updateProgress();
     lockChoices(true);
 
@@ -288,6 +388,7 @@
       setStimulus(trial);
       lockChoices(false);
       state.t0 = performance.now();
+      startRecognitionForTrial();
 
       if (state.beepFn) {
         try { state.beepFn(); } catch (e) {}
@@ -296,6 +397,8 @@
   }
 
   function recordAnswer(chosen) {
+    // Safety: ensure voice listener stops once answered
+    stopRecognition();
     const trial = state.trials[state.idx];
     const t1 = performance.now();
     const rt_ms = Math.round(t1 - state.t0);
@@ -328,6 +431,7 @@
   }
 
   function finish() {
+    stopRecognition();
     progressBar.style.width = '100%';
     show(screenDone);
 
@@ -361,6 +465,8 @@
 
   btnAbort.addEventListener('click', () => {
     // go back to setup without saving
+    stopRecognition();
+    stopRecognition();
     state.phase = 'setup';
     state.trials = [];
     state.results = [];
@@ -370,14 +476,18 @@
   function onChoice(e) {
     const v = e.currentTarget.dataset.value;
     if (!v) return;
-    // prevent double taps
+    if (state.answered) return;
+    state.answered = true;
+    // prevent double taps / stop voice if running
     lockChoices(true);
+    stopRecognition();
     recordAnswer(v);
   }
   choiceA.addEventListener('click', onChoice);
   choiceB.addEventListener('click', onChoice);
 
   btnRestart.addEventListener('click', () => {
+    stopRecognition();
     state.phase = 'setup';
     state.trials = [];
     state.results = [];
